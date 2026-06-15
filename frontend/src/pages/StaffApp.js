@@ -10,11 +10,40 @@ const CATEGORIES = [
   { key: 'reference', icon: '📋', label: { en: 'Reference', ja: '参照',   zh: '参考' } },
 ];
 
-function driveEmbedUrl(url) {
+function driveVideoId(url) {
   if (!url) return null;
   const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
-  return url;
+  return match ? match[1] : null;
+}
+
+function DriveVideo({ url, title }) {
+  const id = driveVideoId(url);
+  if (!id) return null;
+  const directUrl = `https://drive.google.com/uc?export=download&id=${id}`;
+  const previewUrl = `https://drive.google.com/file/d/${id}/preview`;
+
+  return (
+    <div className="video-wrap">
+      <video
+        controls
+        playsInline
+        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, background: '#000' }}
+        onError={e => {
+          // fallback to iframe if video tag fails
+          const wrap = e.target.parentNode;
+          e.target.remove();
+          const iframe = document.createElement('iframe');
+          iframe.src = previewUrl;
+          iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none';
+          iframe.allow = 'autoplay';
+          iframe.allowFullscreen = true;
+          wrap.appendChild(iframe);
+        }}
+      >
+        <source src={directUrl} type="video/mp4" />
+      </video>
+    </div>
+  );
 }
 
 function getField(recipe, field, lang) {
@@ -61,7 +90,6 @@ export default function StaffApp() {
   );
 
   if (selected) {
-    const embedUrl = driveEmbedUrl(selected.video_url);
     const title = getField(selected, 'title', lang);
     const meta = getField(selected, 'meta', lang);
     const ingredients = getJsonField(selected, 'ingredients', lang);
@@ -80,10 +108,8 @@ export default function StaffApp() {
         <div className="detail-container">
           <button className="back-btn" onClick={() => setSelected(null)}>← Back</button>
           <div className="detail-card">
-            {embedUrl ? (
-              <div className="video-wrap">
-                <iframe src={embedUrl} title={title} allow="autoplay" allowFullScreen />
-              </div>
+            {selected.video_url ? (
+              <DriveVideo url={selected.video_url} title={title} />
             ) : (
               <div className="video-placeholder no-video">No video for this recipe</div>
             )}
