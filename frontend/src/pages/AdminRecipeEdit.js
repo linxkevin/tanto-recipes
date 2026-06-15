@@ -48,7 +48,7 @@ export default function AdminRecipeEdit() {
   useEffect(() => {
     api.getCategories().then(setDbCategories);
     if (!isNew) {
-      api.getRecipe(id).then(r => {
+      api.getAdminRecipe ? api.getAdminRecipe(id) : api.getRecipe(id).then(r => {
         setForm({
           category_id: r.category_id,
           icon: r.icon || '🍽',
