@@ -10,10 +10,35 @@ const CATEGORIES = [
   { key: 'reference', icon: '📋', label: { en: 'Reference', ja: '参照',   zh: '参考' } },
 ];
 
-function driveVideoId(url) {
+function getEmbedUrl(url) {
   if (!url) return null;
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
+
+  // YouTube
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?playsinline=1&rel=0`;
+
+  // Google Drive (fallback)
+  const gd = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (gd) return `https://drive.google.com/file/d/${gd[1]}/preview`;
+
+  return url;
+}
+
+function DriveVideo({ url, title }) {
+  const embedUrl = getEmbedUrl(url);
+  if (!embedUrl) return null;
+
+  return (
+    <div className="video-wrap">
+      <iframe
+        src={embedUrl}
+        title={title}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
 }
 
 function DriveVideo({ url, title }) {
