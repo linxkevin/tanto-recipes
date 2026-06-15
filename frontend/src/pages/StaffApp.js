@@ -19,29 +19,31 @@ function driveVideoId(url) {
 function DriveVideo({ url, title }) {
   const id = driveVideoId(url);
   if (!id) return null;
-  const directUrl = `https://drive.google.com/uc?export=download&id=${id}`;
   const previewUrl = `https://drive.google.com/file/d/${id}/preview`;
+  const openUrl = `https://drive.google.com/file/d/${id}/view`;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isIOS) {
+    return (
+      <a href={openUrl} target="_blank" rel="noopener noreferrer"
+        style={{ display: 'block', position: 'relative', paddingTop: '56.25%', background: '#111', textDecoration: 'none' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#1D9E75',
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 28, marginLeft: 4, color: '#fff' }}>▶</span>
+          </div>
+          <span style={{ color: '#fff', fontSize: 14 }}>タップして動画を再生</span>
+        </div>
+      </a>
+    );
+  }
 
   return (
     <div className="video-wrap">
-      <video
-        controls
-        playsInline
-        style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, background: '#000' }}
-        onError={e => {
-          // fallback to iframe if video tag fails
-          const wrap = e.target.parentNode;
-          e.target.remove();
-          const iframe = document.createElement('iframe');
-          iframe.src = previewUrl;
-          iframe.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:none';
-          iframe.allow = 'autoplay';
-          iframe.allowFullscreen = true;
-          wrap.appendChild(iframe);
-        }}
-      >
-        <source src={directUrl} type="video/mp4" />
-      </video>
+      <iframe src={previewUrl} title={title}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+        allow="autoplay" allowFullScreen />
     </div>
   );
 }
