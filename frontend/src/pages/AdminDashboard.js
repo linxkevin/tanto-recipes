@@ -35,6 +35,30 @@ export default function AdminDashboard() {
     setConfirmDelete(null);
   }
 
+  async function handleDuplicate(r) {
+    const copy = await api.createRecipe({
+      category_id: r.category_id,
+      icon: r.icon,
+      title_ja: r.title_ja ? r.title_ja + ' (コピー)' : null,
+      meta_ja: r.meta_ja,
+      ingredients_ja: r.ingredients_ja,
+      steps_ja: r.steps_ja,
+      title_en: r.title_en ? r.title_en + ' (copy)' : null,
+      meta_en: r.meta_en,
+      ingredients_en: r.ingredients_en,
+      steps_en: r.steps_en,
+      title_zh: r.title_zh ? r.title_zh + ' (副本)' : null,
+      meta_zh: r.meta_zh,
+      ingredients_zh: r.ingredients_zh,
+      steps_zh: r.steps_zh,
+      video_url: r.video_url,
+      is_active: false,
+      sort_order: r.sort_order,
+    });
+    setRecipes(prev => [...prev, copy]);
+    navigate('/admin/recipe/' + copy.id);
+  }
+
   function logout() {
     localStorage.removeItem('tanto_token');
     navigate('/admin/login');
@@ -96,6 +120,10 @@ export default function AdminDashboard() {
                   <button onClick={() => navigate(`/admin/recipe/${r.id}`)}
                     style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', fontSize: 13, cursor: 'pointer' }}>
                     Edit
+                  </button>
+                  <button onClick={() => handleDuplicate(r)}
+                    style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                    複製
                   </button>
                   <button onClick={() => setConfirmDelete(r)}
                     style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fcc', background: '#fff', color: '#c0392b', fontSize: 13, cursor: 'pointer' }}>
