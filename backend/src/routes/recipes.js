@@ -3,7 +3,6 @@ const { pool } = require('../db');
 const { authMiddleware } = require('../middleware/auth');
 const router = express.Router();
 
-// ── Translation helper ────────────────────────────────────────────────────────
 async function translateWithClaude(text, targetLang) {
   const langLabel = targetLang === 'en' ? 'English' : 'Simplified Chinese';
   const prompt = `You are a professional culinary translator for a Japanese ramen restaurant in Hawaii.
@@ -71,6 +70,7 @@ async function translateRecipe(body) {
   };
 }
 
+
 // ── Public routes ─────────────────────────────────────────────────────────────
 
 router.get('/', async (req, res) => {
@@ -96,23 +96,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT r.*, c.key as category_key, c.icon as category_icon,
-              c.label_en as category_label, c.color_badge, c.color_text
-       FROM recipes r
-       JOIN categories c ON r.category_id = c.id
-       WHERE r.id = $1 AND r.is_active = true`,
-      [req.params.id]
-    );
-    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ── Admin routes ──────────────────────────────────────────────────────────────
 
 router.get('/admin/all', authMiddleware, async (req, res) => {
@@ -129,6 +112,23 @@ router.get('/admin/all', authMiddleware, async (req, res) => {
   }
 });
 
+router.get('/admin/:id', authMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT r.*, c.key as category_key, c.icon as category_icon,
+              c.label_en as category_label, c.color_badge, c.color_text
+       FROM recipes r
+       JOIN categories c ON r.category_id = c.id
+       WHERE r.id = $1`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/', authMiddleware, async (req, res) => {
   try {
     let {
@@ -138,7 +138,6 @@ router.post('/', authMiddleware, async (req, res) => {
       title_zh, meta_zh, ingredients_zh, steps_zh,
     } = req.body;
 
-    // Auto-translate from Japanese if EN/ZH not provided
     if (title_ja && (!title_en || !title_zh)) {
       const translated = await translateRecipe(req.body);
       if (!title_en) { title_en = translated.title_en; meta_en = translated.meta_en; ingredients_en = translated.ingredients_en; steps_en = translated.steps_en; }
@@ -178,7 +177,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
       retranslate,
     } = req.body;
 
-    // Re-translate if explicitly requested or if JP changed and EN/ZH empty
     if (title_ja && (retranslate || (!title_en && !title_zh))) {
       const translated = await translateRecipe(req.body);
       if (retranslate || !title_en) { title_en = translated.title_en; meta_en = translated.meta_en; ingredients_en = translated.ingredients_en; steps_en = translated.steps_en; }
@@ -229,6 +227,24 @@ router.put('/reorder/batch', authMiddleware, async (req, res) => {
       )
     );
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public single recipe (active only)
+router.get('/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT r.*, c.key as category_key, c.icon as category_icon,
+              c.label_en as category_label, c.color_badge, c.color_text
+       FROM recipes r
+       JOIN categories c ON r.category_id = c.id
+       WHERE r.id = $1 AND r.is_active = true`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
