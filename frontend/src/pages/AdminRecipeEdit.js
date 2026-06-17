@@ -173,7 +173,7 @@ export default function AdminRecipeEdit() {
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
-            <label style={labelStyle}>動画URL（Google Drive）</label>
+            <label style={labelStyle}>動画URL（YouTube）</label>
             <input value={form.video_url} onChange={e => setField('video_url', e.target.value)} style={inputStyle} placeholder="https://drive.google.com/file/d/..." />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
