@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 
@@ -14,11 +14,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState('all');
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [dragId, setDragId] = useState(null);
+  const [savingOrder, setSavingOrder] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadRecipes();
-  }, []);
+  useEffect(() => { loadRecipes(); }, []);
 
   async function loadRecipes() {
     try {
@@ -59,12 +59,53 @@ export default function AdminDashboard() {
     navigate('/admin/recipe/' + copy.id);
   }
 
+  // Drag and drop
+  function handleDragStart(e, id) {
+    setDragId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e, id) {
+    e.preventDefault();
+    if (id === dragId) return;
+    const filtered = getFiltered();
+    const dragIdx = filtered.findIndex(r => r.id === dragId);
+    const hoverIdx = filtered.findIndex(r => r.id === id);
+    if (dragIdx === -1 || hoverIdx === -1) return;
+
+    // Reorder within the full recipes list
+    const newRecipes = [...recipes];
+    const dragItem = newRecipes.find(r => r.id === dragId);
+    const hoverItem = newRecipes.find(r => r.id === id);
+    const dragGlobal = newRecipes.indexOf(dragItem);
+    const hoverGlobal = newRecipes.indexOf(hoverItem);
+    newRecipes.splice(dragGlobal, 1);
+    newRecipes.splice(hoverGlobal, 0, dragItem);
+    setRecipes(newRecipes);
+  }
+
+  async function handleDragEnd() {
+    setDragId(null);
+    setSavingOrder(true);
+    const filtered = getFiltered();
+    const order = filtered.map((r, i) => ({ id: r.id, sort_order: i }));
+    try {
+      await api.reorderRecipes(order);
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
   function logout() {
     localStorage.removeItem('tanto_token');
     navigate('/admin/login');
   }
 
-  const filtered = filterCat === 'all' ? recipes : recipes.filter(r => r.category_key === filterCat);
+  function getFiltered() {
+    return filterCat === 'all' ? recipes : recipes.filter(r => r.category_key === filterCat);
+  }
+
+  const filtered = getFiltered();
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f0' }}>
@@ -73,7 +114,8 @@ export default function AdminDashboard() {
           <span style={{ fontSize: 17, fontWeight: 700 }}>🍜 Tanto Recipes</span>
           <span style={{ fontSize: 13, color: '#888', marginLeft: 10 }}>Admin</span>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {savingOrder && <span style={{ fontSize: 12, color: '#1D9E75' }}>保存中...</span>}
           <a href="/" style={{ fontSize: 13, color: '#1D9E75', textDecoration: 'none' }}>View staff app ↗</a>
           <button onClick={logout} style={{ fontSize: 13, color: '#888', background: 'none', border: 'none', cursor: 'pointer' }}>Logout</button>
         </div>
@@ -82,10 +124,8 @@ export default function AdminDashboard() {
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 700 }}>Recipes</h1>
-          <button
-            onClick={() => navigate('/admin/recipe/new')}
-            style={{ padding: '10px 20px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
+          <button onClick={() => navigate('/admin/recipe/new')}
+            style={{ padding: '10px 20px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
             + New recipe
           </button>
         </div>
@@ -99,13 +139,27 @@ export default function AdminDashboard() {
           ))}
         </div>
 
+        <p style={{ fontSize: 12, color: '#aaa', marginBottom: 12 }}>⠿ をドラッグして並べ替えできます</p>
+
         {loading ? (
           <p style={{ color: '#aaa', textAlign: 'center', padding: 40 }}>Loading...</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filtered.map(r => (
-              <div key={r.id} style={{ background: '#fff', border: '1px solid #e8e8e0', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 24 }}>{r.icon}</span>
+              <div key={r.id}
+                draggable
+                onDragStart={e => handleDragStart(e, r.id)}
+                onDragOver={e => handleDragOver(e, r.id)}
+                onDragEnd={handleDragEnd}
+                style={{
+                  background: '#fff', border: '1px solid #e8e8e0',
+                  borderRadius: 12, padding: '14px 18px',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  opacity: dragId === r.id ? 0.5 : 1,
+                  cursor: 'default',
+                }}>
+                <span style={{ fontSize: 20, color: '#ccc', cursor: 'grab', userSelect: 'none', flexShrink: 0 }}>⠿</span>
+                <span style={{ fontSize: 24, flexShrink: 0 }}>{r.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 15, fontWeight: 600 }}>{r.title_en}</span>
@@ -137,7 +191,6 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Delete confirm modal */}
       {confirmDelete && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: 340, textAlign: 'center' }}>

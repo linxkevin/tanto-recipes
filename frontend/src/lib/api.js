@@ -34,4 +34,5 @@ export const api = {
   createRecipe: (data) => request('/recipes', { method: 'POST', body: JSON.stringify(data) }),
   updateRecipe: (id, data) => request(`/recipes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteRecipe: (id) => request(`/recipes/${id}`, { method: 'DELETE' }),
+  reorderRecipes: (order) => request('/recipes/reorder/batch', { method: 'PUT', body: JSON.stringify({ order }) }),
 };
